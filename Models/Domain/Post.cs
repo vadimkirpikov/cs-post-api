@@ -1,10 +1,14 @@
-﻿namespace CsPostApi.Models.Domain;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace CsPostApi.Models.Domain;
 
 public class Post
 {
-    public required int Id { get; set; }
+    public int Id { get; set; }
     public required int UserId { get; set; }
-    public required string UserFullName { get; set; }
+    [MaxLength(30)]
     public required string Title { get; set; }
+    [MaxLength(1000)]
     public required string Content { get; set; }
+    public DateTime PublishDate { get; set; } = DateTime.UtcNow;
 }

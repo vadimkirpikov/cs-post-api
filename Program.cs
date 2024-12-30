@@ -1,3 +1,4 @@
+using CsApi.Utils.Extensions;
 using CsPostApi.Utils.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,7 +41,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
+app.CreateDbIfNotExists();
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();

@@ -5,7 +5,7 @@ using CsPostApi.Services.Interfaces;
 
 namespace CsPostApi.Services.Implementations;
 
-public class PostService(IPostRepository postRepository) : IPostService
+public class PostService(IPostRepository postRepository, INotifier notifier) : IPostService
 {
     private async Task<Post> TryGetPostByIdAsync(int id)
     {
@@ -25,6 +25,7 @@ public class PostService(IPostRepository postRepository) : IPostService
             UserId = postDto.UserId
         };
         await postRepository.CreatePostAsync(post);
+        await notifier.NotifyAsync(post.Id);
     }
 
     public async Task UpdatePostAsync(int id, PostDto postDto)
@@ -43,6 +44,10 @@ public class PostService(IPostRepository postRepository) : IPostService
 
     public async Task<IEnumerable<Post>> GetPostsByUsersAsync(IEnumerable<int> userIds, int page, int pageSize)
     {
+        if (pageSize <= 0 || pageSize > 1000 || page <= 0)
+        {
+            throw new ArgumentOutOfRangeException($"Invalid page or page size: {pageSize}");
+        }
         return await postRepository.GetPostsByUsersAsync(userIds, page, pageSize);
     }
 

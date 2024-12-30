@@ -17,7 +17,8 @@ public static class CustomDiManager
             {
                 var config = new ProducerConfig()
                 {
-                    BootstrapServers = builder.Configuration["Kafka:BootstrapServers"],
+                    BootstrapServers = builder.Configuration["KafkaSettings:BootstrapServers"],
+                    EnableIdempotence = true,
                 };
                 var client = new ProducerBuilder<Null, string>(config).Build();
                 return client;

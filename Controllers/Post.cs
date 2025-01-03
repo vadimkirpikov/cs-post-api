@@ -7,7 +7,7 @@ namespace CsPostApi.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/posts")]
+[Route("api/v1/posts")]
 public class PostController(IPostService postService) : ControllerBase
 {
     [HttpPost("publish")]
@@ -31,7 +31,7 @@ public class PostController(IPostService postService) : ControllerBase
         return Ok();
     }
 
-    [HttpGet("get/by-users/page/{page:int}/pageSize/{pageSize:int}")]
+    [HttpGet("get-by-users/page/{page:int}/pageSize/{pageSize:int}")]
     public async Task<IActionResult> GetPostByUsers([FromRoute] int page, [FromRoute] int pageSize, [FromQuery] IEnumerable<int> ids)
     {
         var result = await postService.GetPostsByUsersAsync(ids, page, pageSize);

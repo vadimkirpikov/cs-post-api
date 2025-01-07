@@ -16,29 +16,39 @@ public class PostService(IPostRepository postRepository, INotifier notifier) : I
         }
         return existingPost;
     }
-    public async Task PublishPostAsync(PostDto postDto)
+
+    private static void CheckOwnership(Post post, int userId)
+    {
+        if (post.UserId != userId)
+        {
+            throw new ArgumentException($"User with id={userId} is not owner of the post with id={post.Id}");
+        }
+    }
+    public async Task PublishPostAsync(int userId, PostDto postDto)
     {
         var post = new Post
         {
             Title = postDto.Title,
             Content = postDto.Content,
-            UserId = postDto.UserId
+            UserId = userId,
         };
         await postRepository.CreatePostAsync(post);
         await notifier.NotifyAsync(post.Id);
     }
 
-    public async Task UpdatePostAsync(int id, PostDto postDto)
+    public async Task UpdatePostAsync(int postId, int userId, PostDto postDto)
     {
-        var existingPost = await TryGetPostByIdAsync(id);
+        var existingPost = await TryGetPostByIdAsync(postId);
+        CheckOwnership(existingPost, userId);
         existingPost.Title = postDto.Title;
         existingPost.Content = postDto.Content;
         await postRepository.UpdatePostAsync(existingPost);
     }
 
-    public async Task DeletePostAsync(int id)
+    public async Task DeletePostAsync(int postId, int userId)
     {
-        var existingPost = await TryGetPostByIdAsync(id);
+        var existingPost = await TryGetPostByIdAsync(postId);
+        CheckOwnership(existingPost, userId);
         await postRepository.DeletePostAsync(existingPost);
     }
 

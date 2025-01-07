@@ -1,4 +1,5 @@
-﻿using CsPostApi.Models.Dto;
+﻿using System.Security.Claims;
+using CsPostApi.Models.Dto;
 using CsPostApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,21 +14,24 @@ public class PostController(IPostService postService) : ControllerBase
     [HttpPost("publish")]
     public async Task<IActionResult> PublishPostAsync([FromBody] PostDto postDto)
     {
-        await postService.PublishPostAsync(postDto);
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        await postService.PublishPostAsync(userId, postDto);
         return Ok();
     }
 
     [HttpPut("update/{id:int}")]
     public async Task<IActionResult> UpdatePostAsync([FromRoute] int id, [FromBody] PostDto postDto)
     {
-        await postService.UpdatePostAsync(id, postDto);
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        await postService.UpdatePostAsync(id, userId, postDto);
         return Ok();
     }
 
     [HttpDelete("delete/{id:int}")]
     public async Task<IActionResult> DeletePostAsync([FromRoute] int id)
     {
-        await postService.DeletePostAsync(id);
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        await postService.DeletePostAsync(id, userId);
         return Ok();
     }
 

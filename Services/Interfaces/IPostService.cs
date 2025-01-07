@@ -5,9 +5,9 @@ namespace CsPostApi.Services.Interfaces;
 
 public interface IPostService
 {
-    Task PublishPostAsync(PostDto postDto);
-    Task UpdatePostAsync(int id, PostDto postDto);
-    Task DeletePostAsync(int postId);
+    Task PublishPostAsync(int userId, PostDto postDto);
+    Task UpdatePostAsync(int postId, int userId, PostDto postDto);
+    Task DeletePostAsync(int postId, int userId);
     Task<IEnumerable<Post>> GetPostsByUsersAsync(IEnumerable<int> userIds, int page, int pageSize);
     Task<Post> GetPostAsync(int id);
 }

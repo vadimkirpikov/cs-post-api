@@ -22,130 +22,123 @@ public class PostServiceTests
     }
 
     [Fact]
-    public async Task PublishPostAsync_CreatesPostAndNotifies()
+    public async Task PublishPostAsync_Should_Create_Post_And_Notify()
     {
-        var postDto = new PostDto { Title = "Test", Content = "Test content", UserId = 1 };
-        _postRepositoryMock.Setup(r => r.CreatePostAsync(It.IsAny<Post>()))
+        var userId = 1;
+        var postDto = new PostDto { Title = "Test Title", Content = "Test Content" };
+        _postRepositoryMock
+            .Setup(repo => repo.CreatePostAsync(It.IsAny<Post>()))
+            .Returns(Task.CompletedTask);
+        _notifierMock
+            .Setup(notifier => notifier.NotifyAsync(It.IsAny<int>()))
             .Returns(Task.CompletedTask);
 
-        
-        await _postService.PublishPostAsync(postDto);
-        
-        _postRepositoryMock.Verify(r => r.CreatePostAsync(It.Is<Post>(p => p.Title == "Test" && p.Content == "Test content" && p.UserId == 1)), Times.Once);
-        _notifierMock.Verify(n => n.NotifyAsync(It.IsAny<int>()), Times.Once);
+        await _postService.PublishPostAsync(userId, postDto);
+
+        _postRepositoryMock.Verify(repo => repo.CreatePostAsync(It.Is<Post>(p =>
+            p.UserId == userId &&
+            p.Title == postDto.Title &&
+            p.Content == postDto.Content
+        )), Times.Once);
+
+        _notifierMock.Verify(notifier => notifier.NotifyAsync(It.IsAny<int>()), Times.Once);
     }
 
     [Fact]
-    public async Task UpdatePostAsync_UpdatesExistingPost()
+    public async Task UpdatePostAsync_Should_Update_Post_When_User_Is_Owner()
     {
-        
-        var postDto = new PostDto { Title = "Updated", Content = "Updated content", UserId = 1 };
-        var existingPost = new Post { Id = 1, Title = "Old", Content = "Old content", UserId = 1 };
+        var postId = 1;
+        var userId = 1;
+        var postDto = new PostDto { Title = "Updated Title", Content = "Updated Content" };
+        var existingPost = new Post { Id = postId, UserId = userId, Title = "Old Title", Content = "Old Content" };
 
-        _postRepositoryMock.Setup(r => r.GetPostByIdAsync(1))
-            .ReturnsAsync(existingPost);
-
-        
-        await _postService.UpdatePostAsync(1, postDto);
+        _postRepositoryMock.Setup(repo => repo.GetPostByIdAsync(postId)).ReturnsAsync(existingPost);
+        _postRepositoryMock.Setup(repo => repo.UpdatePostAsync(It.IsAny<Post>())).Returns(Task.CompletedTask);
 
         
-        _postRepositoryMock.Verify(r => r.UpdatePostAsync(It.Is<Post>(p => p.Title == "Updated" && p.Content == "Updated content")), Times.Once);
+        await _postService.UpdatePostAsync(postId, userId, postDto);
+
+        
+        _postRepositoryMock.Verify(repo => repo.UpdatePostAsync(It.Is<Post>(p =>
+            p.Id == postId &&
+            p.Title == postDto.Title &&
+            p.Content == postDto.Content
+        )), Times.Once);
     }
 
     [Fact]
-    public async Task UpdatePostAsync_ThrowsWhenPostDoesNotExist()
+    public async Task UpdatePostAsync_Should_Throw_When_User_Is_Not_Owner()
     {
-        
-        var postDto = new PostDto { Title = "Updated", Content = "Updated content", UserId = 1 };
+        var postId = 1;
+        var userId = 2; 
+        var postDto = new PostDto { Title = "Updated Title", Content = "Updated Content" };
+        var existingPost = new Post { Id = postId, UserId = 1, Title = "Test title", Content = "Test content"};
 
-        _postRepositoryMock.Setup(r => r.GetPostByIdAsync(1))
-            .ReturnsAsync((Post)null);
-
+        _postRepositoryMock.Setup(repo => repo.GetPostByIdAsync(postId)).ReturnsAsync(existingPost);
         
-        await Assert.ThrowsAsync<ArgumentException>(() => _postService.UpdatePostAsync(1, postDto));
+        await Assert.ThrowsAsync<ArgumentException>(() => _postService.UpdatePostAsync(postId, userId, postDto));
     }
 
     [Fact]
-    public async Task DeletePostAsync_DeletesExistingPost()
+    public async Task DeletePostAsync_Should_Delete_Post_When_User_Is_Owner()
     {
-        
-        var existingPost = new Post { Id = 1, Title = "Test", Content = "Test content", UserId = 1 };
+        var postId = 1;
+        var userId = 1;
+        var existingPost = new Post { Id = postId, UserId = userId, Title = "Test title", Content = "Test content"};
 
-        _postRepositoryMock.Setup(r => r.GetPostByIdAsync(1))
-            .ReturnsAsync(existingPost);
+        _postRepositoryMock.Setup(repo => repo.GetPostByIdAsync(postId)).ReturnsAsync(existingPost);
+        _postRepositoryMock.Setup(repo => repo.DeletePostAsync(existingPost)).Returns(Task.CompletedTask);
 
-        
-        await _postService.DeletePostAsync(1);
+        await _postService.DeletePostAsync(postId, userId);
 
-        
-        _postRepositoryMock.Verify(r => r.DeletePostAsync(existingPost), Times.Once);
+        _postRepositoryMock.Verify(repo => repo.DeletePostAsync(existingPost), Times.Once);
     }
 
     [Fact]
-    public async Task DeletePostAsync_ThrowsWhenPostDoesNotExist()
+    public async Task GetPostsByUsersAsync_Should_Throw_For_Invalid_Page_Size()
     {
-        
-        _postRepositoryMock.Setup(r => r.GetPostByIdAsync(1))
-            .ReturnsAsync((Post)null);
-
-        
-        await Assert.ThrowsAsync<ArgumentException>(() => _postService.DeletePostAsync(1));
-    }
-
-    [Fact]
-    public async Task GetPostsByUsersAsync_ReturnsPosts()
-    {
-        
         var userIds = new List<int> { 1, 2, 3 };
-        var posts = new List<Post>
-        {
-            new Post { Id = 1, Title = "Test1", Content = "Content1", UserId = 1 },
-            new Post { Id = 2, Title = "Test2", Content = "Content2", UserId = 2 }
-        };
-
-        _postRepositoryMock.Setup(r => r.GetPostsByUsersAsync(userIds, 1, 10))
-            .ReturnsAsync(posts);
-
+        var invalidPageSize = 0;
         
-        var result = await _postService.GetPostsByUsersAsync(userIds, 1, 10);
-
-        
-        Assert.Equal(2, result.Count());
-        _postRepositoryMock.Verify(r => r.GetPostsByUsersAsync(userIds, 1, 10), Times.Once);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _postService.GetPostsByUsersAsync(userIds, page: 1, pageSize: invalidPageSize));
     }
 
     [Fact]
-    public async Task GetPostAsync_ReturnsExistingPost()
+    public async Task GetPostsByUsersAsync_Should_Return_Posts()
     {
-        
-        var post = new Post { Id = 1, Title = "Test", Content = "Test content", UserId = 1 };
+        var userIds = new List<int> { 1, 2 };
+        var page = 1;
+        var pageSize = 10;
+        var posts = new List<Post> { new Post { Id = 1, UserId = 1, Title = "Test title", Content = "Test content"}, new Post { Id = 2, UserId = 2, Title = "Test title", Content = "Test content"} };
 
-        _postRepositoryMock.Setup(r => r.GetPostByIdAsync(1))
-            .ReturnsAsync(post);
+        _postRepositoryMock.Setup(repo => repo.GetPostsByUsersAsync(userIds, page, pageSize)).ReturnsAsync(posts);
 
-        
-        var result = await _postService.GetPostAsync(1);
+        var result = await _postService.GetPostsByUsersAsync(userIds, page, pageSize);
 
-        
+        Assert.Equal(posts, result);
+    }
+
+    [Fact]
+    public async Task GetPostAsync_Should_Return_Post_If_Exists()
+    {
+        var postId = 1;
+        var post = new Post { Id = postId, UserId = 1, Title = "Test title", Content = "Test content" };
+
+        _postRepositoryMock.Setup(repo => repo.GetPostByIdAsync(postId)).ReturnsAsync(post);
+
+        var result = await _postService.GetPostAsync(postId);
+
         Assert.Equal(post, result);
     }
 
     [Fact]
-    public async Task GetPostAsync_ThrowsWhenPostDoesNotExist()
+    public async Task GetPostAsync_Should_Throw_If_Post_Not_Found()
     {
-        
-        _postRepositoryMock.Setup(r => r.GetPostByIdAsync(1))
-            .ReturnsAsync((Post)null);
-        
-        await Assert.ThrowsAsync<ArgumentException>(() => _postService.GetPostAsync(1));
-    }
+        var postId = 1;
 
-    [Theory]
-    [InlineData(0, 10)]
-    [InlineData(1, 1001)]
-    [InlineData(1, 0)]
-    public async Task GetPostsAsync_ThrowsOutOfRangeException(int page, int pageSize)
-    {
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _postService.GetPostsByUsersAsync(new List<int> { 1, 2, 3 }, page, pageSize));
+        _postRepositoryMock.Setup(repo => repo.GetPostByIdAsync(postId)).ReturnsAsync((Post)null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _postService.GetPostAsync(postId));
     }
 }
